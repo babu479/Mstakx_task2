@@ -100,16 +100,18 @@ Since systemctl doesn't display output, we'll use its status command to verify t
 sudo systemctl status jenkins
 ```
 If everything went well, the beginning of the output should show that the service is active and configured to start at boot:
-
+```bash
 Output
 ● jenkins.service - LSB: Start Jenkins at boot time
   Loaded: loaded (/etc/init.d/jenkins; bad; vendor preset: enabled)
   Active:active (exited) since Thu 2017-04-20 16:51:13 UTC; 2min 7s ago
     Docs: man:systemd-sysv-generator(8)
+```
 Now that Jenkins is running, we'll adjust our firewall rules so that we can reach Jenkins from a web browser to complete the initial set up.
 
 #### Setting up Jenkins
 To set up our installation, we'll visit Jenkins on its default port, 8080, using the server domain name or IP address: http://ip_address_or_domain_name:8080
+
 
 We should see "Unlock Jenkins" screen, which displays the location of the initial password
 
@@ -122,7 +124,7 @@ sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
 We'll copy the 32-character alphanumeric password from the terminal and paste it into the "Administrator password" field, then click "Continue". The next screen presents the option of installing suggested plugins or selecting specific plugins.
 
-Customize Jenkins Screen
+#### Customize Jenkins Screen
 
 We'll click the "Install suggested plugins" option, which will immediately begin the installation process:
 
