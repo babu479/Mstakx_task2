@@ -241,4 +241,19 @@ def pushToImage(blueContainerName,greenContainerName, tag, dockerUser, dockerPas
     
     echo "Image push complete"
 	}
-	```
+```
+	
+	
+### step 3 & 4 : Create development namespace and sample application deployment 
+I have selected microservices application to deploy in development namespace
+because of deploy of microservice is important for kubernetes.
+
+```bash
+kubectl create -f complete-demo-of-sock-shop-microservices.yaml
+kubectl get pods -n development 
+```
+if all the pods are running fine, then try to access the application with nodeport of frontend microservice service 
+```bash
+curl http://<master-sever-Ip>:NodePort/
+```
+
