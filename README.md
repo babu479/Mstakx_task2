@@ -333,3 +333,195 @@ service/prometheus created
 ```
 
 this yaml file will configure node-exporter,prometheus and grafana
+
+### Step 10: Setup EFK (ElasticSearch, fluentd, Kibana)
+Once you've cloned the repository, create the Namespace using kubectl create with the -f filename flag:
+```bash
+kubectl create -f namespace_efk.yaml
+```
+You should see the following output:
+
+Output
+```bash
+namespace/kube-logging created
+```
+You can then confirm that the Namespace was successfully created:
+```bash
+kubectl get namespaces
+```
+At this point, you should see the new kube-logging Namespace:
+```bash
+Output
+NAME           STATUS    AGE
+default        Active    23m
+kube-logging   Active    1m
+kube-public    Active    23m
+kube-system    Active    23m
+```
+We can now deploy an Elasticsearch cluster into this isolated logging Namespace.
+
+#### Create the service using kubectl:
+
+```bash
+kubectl create -f elasticSearch-service.yaml
+```
+You should see the following output:
+
+Output
+```bash
+service/elasticsearch created
+```
+Finally, double-check that the service was successfully created using kubectl get:
+```bash
+kubectl get services --namespace=kube-logging
+```
+You should see the following:
+```bash
+Output
+NAME            TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)             AGE
+elasticsearch   ClusterIP   None         <none>        9200/TCP,9300/TCP   26s
+```
+Now that we've set up our headless service and a stable .elasticsearch.kube-logging.svc.cluster.local domain for our Pods, we can go ahead and create the StatefulSet.
+
+#### Creating the StatefulSet
+
+Now, deploy the StatefulSet using kubectl:
+```bash
+kubectl create -f elasticSearch-statefulset.yaml
+You should see the following output:
+
+Output
+statefulset.apps/es-cluster created
+```
+You can monitor the StatefulSet as it is rolled out using kubectl rollout status:
+```bash
+kubectl rollout status sts/es-cluster --namespace=kube-logging
+You should see the following output as the cluster is rolled out:
+
+Output
+Waiting for 3 pods to be ready...
+Waiting for 2 pods to be ready...
+Waiting for 1 pods to be ready...
+partitioned roll out complete: 3 new pods have been updated...
+```
+Once all the Pods have been deployed, you can check that your Elasticsearch cluster is functioning correctly by performing a request against the REST API.
+
+To do so, first forward the local port 9200 to the port 9200 on one of the Elasticsearch nodes (es-cluster-0) using kubectl port-forward:
+```bash
+kubectl port-forward es-cluster-0 9200:9200 --namespace=kube-logging
+```
+Then, in a separate terminal window, perform a curl request against the REST API:
+```bash
+curl http://localhost:9200/_cluster/state?pretty
+```
+You shoulds see the following output:
+```bash
+Output
+{
+  "cluster_name" : "k8s-logs",
+  "compressed_size_in_bytes" : 348,
+  "cluster_uuid" : "QD06dK7CQgids-GQZooNVw",
+  "version" : 3,
+  "state_uuid" : "mjNIWXAzQVuxNNOQ7xR-qg",
+  "master_node" : "IdM5B7cUQWqFgIHXBp0JDg",
+  "blocks" : { },
+  "nodes" : {
+    "u7DoTpMmSCixOoictzHItA" : {
+      "name" : "es-cluster-1",
+      "ephemeral_id" : "ZlBflnXKRMC4RvEACHIVdg",
+      "transport_address" : "10.244.8.2:9300",
+      "attributes" : { }
+    },
+    "IdM5B7cUQWqFgIHXBp0JDg" : {
+      "name" : "es-cluster-0",
+      "ephemeral_id" : "JTk1FDdFQuWbSFAtBxdxAQ",
+      "transport_address" : "10.244.44.3:9300",
+      "attributes" : { }
+    },
+    "R8E7xcSUSbGbgrhAdyAKmQ" : {
+      "name" : "es-cluster-2",
+      "ephemeral_id" : "9wv6ke71Qqy9vk2LgJTqaA",
+      "transport_address" : "10.244.40.4:9300",
+      "attributes" : { }
+    }
+  },
+...
+```
+This indicates that our Elasticsearch cluster k8s-logs has successfully been created with 3 nodes: es-cluster-0, es-cluster-1, and es-cluster-2. The current master node is es-cluster-0.
+
+Now that your Elasticsearch cluster is up and running, you can move on to setting up a Kibana frontend for it.
+
+#### Kibana Deployment and Service
+This time, we'll create the Service and Deployment in the same file
+```bash
+kubectl create -f kibana.yaml
+You should see the following output:
+
+Output
+service/kibana created
+deployment.apps/kibana created
+```
+You can check that the rollout succeeded by running the following command:
+```bash
+kubectl rollout status deployment/kibana --namespace=kube-logging
+You should see the following output:
+
+Output
+deployment "kibana" successfully rolled out
+```
+To access the Kibana interface, we'll once again forward a local port to the Kubernetes node running Kibana. Grab the Kibana Pod details using kubectl get:
+```bash
+kubectl get pods --namespace=kube-logging
+Output
+NAME                      READY     STATUS    RESTARTS   AGE
+es-cluster-0              1/1       Running   0          55m
+es-cluster-1              1/1       Running   0          54m
+es-cluster-2              1/1       Running   0          54m
+kibana-6c9fb4b5b7-plbg2   1/1       Running   0          4m27s
+```
+Here we observe that our Kibana Pod is called kibana-6c9fb4b5b7-plbg2.
+
+Forward the local port 5601 to port 5601 on this Pod:
+```bash
+kubectl port-forward kibana-6c9fb4b5b7-plbg2 5601:5601 --namespace=kube-logging
+```
+You should see the following output:
+```bash
+Output
+Forwarding from 127.0.0.1:5601 -> 5601
+Forwarding from [::1]:5601 -> 5601
+```
+Now, in your web browser, visit the following URL:
+```bash
+http://localhost:5601
+```
+
+#### Fluentd DaemonSet
+
+Now, roll out the DaemonSet using kubectl:
+```bash
+kubectl create -f fluentd.yaml
+```
+You should see the following output:
+```bash
+Output
+serviceaccount/fluentd created
+clusterrole.rbac.authorization.k8s.io/fluentd created
+clusterrolebinding.rbac.authorization.k8s.io/fluentd created
+daemonset.extensions/fluentd created
+```
+Verify that your DaemonSet rolled out successfully using kubectl:
+```bash
+kubectl get ds --namespace=kube-logging
+```
+You should see the following status output:
+```bash
+Output
+NAME      DESIRED   CURRENT   READY     UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+fluentd   3         3         3         3            3           <none>          58s
+```
+This indicates that there are 3 fluentd Pods running, which corresponds to the number of nodes in our Kubernetes cluster.
+
+We can now check Kibana to verify that log data is being properly collected and shipped to Elasticsearch.
+
+With the kubectl port-forward still open, navigate to http://localhost:5601.
