@@ -256,4 +256,44 @@ if all the pods are running fine, then try to access the application with nodepo
 ```bash
 curl http://<master-sever-Ip>:NodePort/
 ```
+step 5 : Install and configure helm in kubernetes
+Prerequisites
+You should have the following before getting started with the helm setup.
+
+A running Kubernetes cluster.
+The Kubernetes cluster API endpoint should be reachable from the machine you are running helm.
+Authenticate the cluster using kubectl and it should have cluster admin permissions.
+
+Installing Helm [Client]
+This installation is on the client side. ie, a personal workstation, a Linux VM, etc. You can install helm using a single liner. It will automatically find your OS type and installs helm on it.
+
+Execute the following from your command line.
+ ```bash
+ bash helm_install.sh
+```
+Create Tiller Service Account With Cluster Admin Permissions
+Tiller is the server component for helm. Tiller will be present in the kubernetes cluster and the helm client talks to it for deploying applications using helm charts.
+
+Helm will be managing your cluster resources. So we need to add necessary permissions to the tiller components which resides in the cluster kube-system namespace.
+
+Here is what we will do,
+
+Create a service account names tiller
+Create a ClusterRoleBinding with cluster-admin permissions to the tiller service account.
+We will add both service account and clusterRoleBinding in one yaml file.
+ 
+Lets create these resources using kubectl
+
+kubectl apply -f helm-rbac.yam
+
+Initialize Helm: Deploy Tiller
+Next step is to initialize helm. When you initialize helm, a deployment named tiller-deploy will be deployed in the kube-system namespace.
+
+If you want a specific tiller version to be installed, you can specify the tiller image link in the init command using --tiller-image flag. You can find the all tiller docker images in public google GCR registry.
+
+helm init --service-account=tiller --tiller-image=gcr.io/kubernetes-helm/tiller:v2.14.1   --history-max 300
+
+You can check the tiller deployment in the kube-system namespace using kubectl.
+
+kubectl get deployment tiller-deploy -n kube-system
 
