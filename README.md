@@ -303,3 +303,33 @@ You can check the tiller deployment in the kube-system namespace using kubectl.
 kubectl get deployment tiller-deploy -n kube-system
 ```
 
+### Step 8 & 9 : Setup prometheus and grafana
+I have create one yaml to setup prometheus and grafana on kubernetes.we can run this by using kubectl
+```bash
+kubectl create -f prometheus_grafana.yaml
+namespace/monitoring created
+clusterrolebinding.rbac.authorization.k8s.io/prometheus created
+clusterrole.rbac.authorization.k8s.io/prometheus created
+serviceaccount/prometheus-k8s created
+configmap/alertmanager-templates created
+configmap/alertmanager created
+deployment.extensions/alertmanager created
+service/alertmanager created
+deployment.extensions/grafana-core created
+configmap/grafana-import-dashboards created
+job.batch/grafana-import-dashboards created
+secret/grafana created
+service/grafana created
+configmap/prometheus-core created
+deployment.extensions/prometheus-core created
+deployment.extensions/kube-state-metrics created
+serviceaccount/kube-state-metrics created
+service/kube-state-metrics created
+daemonset.extensions/node-directory-size-metrics created
+daemonset.extensions/prometheus-node-exporter created
+service/prometheus-node-exporter created
+configmap/prometheus-rules created
+service/prometheus created
+```
+
+this yaml file will configure node-exporter,prometheus and grafana
