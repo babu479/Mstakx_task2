@@ -140,3 +140,105 @@ Once the first admin user is in place, you should see a "Jenkins is ready!" conf
 
 Jenkins is ready screen
 Click "Start using Jenkins" to visit the main
+
+### Create jenkins pipeline Job for CI/CD
+
+I have written a jenkinsfile which contains multiple stages to create docker image and push that image into the docker repository
+#### variables:
+```bash
+def BLUE_CONTAINER_NAME="blue-container"
+def GREEN_CONTAINER_NAME="green-container"
+def BLUE_CONTAINER_NAME_TAG="babu479/blue_demo_application"
+def GREEN_CONTAINER_NAME_TAG="babu479/green_demo_application"
+def CONTAINER_TAG="latest"
+def DOCKER_HUB_USER="babu479"
+def HTTP_PORT="8080"
+```
+
+#### Stage 1: Intialize
+In this stage, I am intilizing maven with by using global tool configuration
+```bash
+stage ('Initialize') {
+        def mavenHome  = tool 'maven'
+        env.PATH = "${mavenHome}/bin:${env.PATH}"
+}
+```
+#### Stage 2: clone
+In this stage, I am cloning my demo application code into two different directories
+one of the application with background blue color and antoher with green but both are in different directories
+```bash
+stage ('Clone') {
+dir("blue"){
+git branch: 'blue',
+credentialsId: 'ae6c9066a-410c-4462-b2ed-56004c6c20ab',
+url: 'https://github.com/babu479/Demo-Application.git'
+}
+dir("green"){
+git branch: 'green',
+credentialsId: 'ae6c9066a-410c-4462-b2ed-56004c6c20ab',
+url: 'https://github.com/babu479/Demo-Application.git'
+}
+}
+```
+#### stage 3: Build
+In this stage, I am running maven install command to build war to demo applications
+
+```bash
+stage ('Build') {
+sh """
+cd $WORKSPACE/blue
+mvn clean install"""
+sh """
+cd $WORKSPACE/green
+mvn clean install"""
+}
+```
+#### stage 4 & 5 : purge the old container and Build new image 
+```bash
+stage ("Image Prune") {
+    imagePrune(BLUE_CONTAINER_NAME, GREEN_CONTAINER_NAME)
+}
+stage('Image Build'){
+        imageBuild(BLUE_CONTAINER_NAME, GREEN_CONTAINER_NAME,CONTAINER_TAG)
+    }
+	def imagePrune(blueContainerName, greenContainerName){
+    try {
+        sh """id
+        docker image prune -f
+        docker stop $blueContainerName
+        whoami"""
+	sh """id
+        docker image prune -f
+        docker stop $greenContainerName
+        whoami"""
+    } catch(error){}
+}
+def imageBuild(blueContainerName, greenContainerName, tag){
+    sh """
+    cd $WORKSPACE/blue
+    cp $WORKSPACE/blue/target/*.war $WORKSPACE/blue
+	docker build -t $blueContainerName:$tag  -t $blueContainerName --pull --no-cache ."""
+     sh """
+    cd $WORKSPACE/green
+    cp $WORKSPACE/green/target/*.war $WORKSPACE/green
+	docker build -t $greenContainerName:$tag  -t $greenContainerName --pull --no-cache ."""
+    echo "Image build complete"
+}
+```
+#### stage 6: push image to repository
+```bash
+stage('Push to Docker Registry'){
+        withCredentials([usernamePassword(credentialsId: 'DockerHubAccount', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            pushToImage(BLUE_CONTAINER_NAME,GREEN_CONTAINER_NAME, CONTAINER_TAG, USERNAME, PASSWORD)
+        }
+def pushToImage(blueContainerName,greenContainerName, tag, dockerUser, dockerPassword){
+    sh """docker login -u $dockerUser -p $dockerPassword
+    docker tag $blueContainerName:$tag $dockerUser/$blueContainerName:$tag
+    docker push $dockerUser/$blueContainerName:$tag """
+    sh """docker login -u $dockerUser -p $dockerPassword
+    docker tag $greenContainerName:$tag $dockerUser/$greenContainerName:$tag
+    docker push $dockerUser/$greenContainerName:$tag """
+    
+    echo "Image push complete"
+	}
+	```
