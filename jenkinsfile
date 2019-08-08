@@ -1,0 +1,79 @@
+def BLUE_CONTAINER_NAME="blue-container"
+def GREEN_CONTAINER_NAME="green-container"
+def BLUE_CONTAINER_NAME_TAG="babu479/blue_demo_application"
+def GREEN_CONTAINER_NAME_TAG="babu479/green_demo_application"
+def CONTAINER_TAG="latest"
+def DOCKER_HUB_USER="babu479"
+def HTTP_PORT="8080"
+
+node('') {
+stage ('Initialize') {
+        def mavenHome  = tool 'maven'
+        env.PATH = "${mavenHome}/bin:${env.PATH}"
+}
+stage ('Clone') {
+dir("blue"){
+git branch: 'blue',
+credentialsId: 'ae6c9066a-410c-4462-b2ed-56004c6c20ab',
+url: 'https://github.com/babu479/Demo-Application.git'
+}
+dir("green"){
+git branch: 'green',
+credentialsId: 'ae6c9066a-410c-4462-b2ed-56004c6c20ab',
+url: 'https://github.com/babu479/Demo-Application.git'
+}
+}
+stage ('Build') {
+sh """
+cd $WORKSPACE/blue
+mvn clean install"""
+sh """
+cd $WORKSPACE/green
+mvn clean install"""
+}
+stage ("Image Prune") {
+    imagePrune(BLUE_CONTAINER_NAME, GREEN_CONTAINER_NAME)
+}
+stage('Image Build'){
+        imageBuild(BLUE_CONTAINER_NAME, GREEN_CONTAINER_NAME,CONTAINER_TAG)
+    }
+    stage('Push to Docker Registry'){
+        withCredentials([usernamePassword(credentialsId: 'DockerHubAccount', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            pushToImage(BLUE_CONTAINER_NAME,GREEN_CONTAINER_NAME, CONTAINER_TAG, USERNAME, PASSWORD)
+        }
+    }
+}
+ def imagePrune(blueContainerName, greenContainerName){
+    try {
+        sh """id
+        docker image prune -f
+        docker stop $blueContainerName
+        whoami"""
+	sh """id
+        docker image prune -f
+        docker stop $greenContainerName
+        whoami"""
+    } catch(error){}
+}
+def imageBuild(blueContainerName, greenContainerName, tag){
+    sh """
+    cd $WORKSPACE/blue
+    cp $WORKSPACE/blue/target/*.war $WORKSPACE/blue
+	docker build -t $blueContainerName:$tag  -t $blueContainerName --pull --no-cache ."""
+     sh """
+    cd $WORKSPACE/green
+    cp $WORKSPACE/green/target/*.war $WORKSPACE/green
+	docker build -t $greenContainerName:$tag  -t $greenContainerName --pull --no-cache ."""
+    echo "Image build complete"
+}
+
+def pushToImage(blueContainerName,greenContainerName, tag, dockerUser, dockerPassword){
+    sh """docker login -u $dockerUser -p $dockerPassword
+    docker tag $blueContainerName:$tag $dockerUser/$blueContainerName:$tag
+    docker push $dockerUser/$blueContainerName:$tag """
+    sh """docker login -u $dockerUser -p $dockerPassword
+    docker tag $greenContainerName:$tag $dockerUser/$greenContainerName:$tag
+    docker push $dockerUser/$greenContainerName:$tag """
+    
+    echo "Image push complete"
+	}
