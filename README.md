@@ -17,19 +17,18 @@ apt-get install -y docker.io
 #### Install kubeadm, Kubelet, Kubectl and Kubernetes-cni
 apt-get install -y kubelet kubeadm kubectl kubernetes-cni
 #### Creating the Kubernetes Master Node
-Lets initialize the cluster master node using kubeadm init
-kubeadm init
-After this command finished running, the following message will be thrown on the screen: Remember to read and follow the instructions.
-kubectl get node
-We had this error because we have not followed the instructions shown above
-you must first run  the following as a non-root user
-mkdir -p $HOME/.kube
+ Lets initialize the cluster master node using kubeadm init
+ kubeadm init
+ After this command finished running, the following message will be thrown on the screen: Remember to read and follow the instructions.
+ kubectl get node
+ We had this error because we have not followed the instructions shown above,you must first run  the following as a non-root user
+ mkdir -p $HOME/.kube
  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
  sudo chown $(id -u):$(id -g) $HOME/.kube/config
  
-kubectl get node
-kubectl get pods --all-namespaces
-Now  have been able to run the kubectl command and its showing  one node running. Note that the master node is showing NotReady status. We want the master to show Ready. The reason for this is because kube-dns (kube-system kube-dns-6f4fd4bdf-2q7z2) is pending as shown below. The NotReady status will disappear after a CNI network is installed.
+ kubectl get node
+ kubectl get pods --all-namespaces
+ ##### Now  have been able to run the kubectl command and its showing  one node running. Note that the master node is showing NotReady status. We want the master to show Ready. The reason for this is because kube-dns (kube-system kube-dns-6f4fd4bdf-2q7z2) is pending as shown below. The NotReady status will disappear after a CNI network is installed.
 
 Installing a CNI Network.
 sudo su -
