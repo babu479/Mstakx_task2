@@ -7,16 +7,16 @@
 sudo apt-get update
 sudo apt-get install -y apt-transport-https
 sudo su -
- curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add
- cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
- > deb http://apt.kubernetes.io/ kubernetes-xenial main
- > EOF
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add
+cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+> deb http://apt.kubernetes.io/ kubernetes-xenial main
+> EOF
 #### Install Docker
- apt-get update
- apt-get install -y docker.io
+apt-get update
+apt-get install -y docker.io
 #### Install kubeadm, Kubelet, Kubectl and Kubernetes-cni
- apt-get install -y kubelet kubeadm kubectl kubernetes-cni
-Creating the Kubernetes Master Node
+apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+#### Creating the Kubernetes Master Node
 Lets initialize the cluster master node using kubeadm init
 kubeadm init
 After this command finished running, the following message will be thrown on the screen: Remember to read and follow the instructions.
