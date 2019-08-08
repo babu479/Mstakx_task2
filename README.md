@@ -284,16 +284,22 @@ We will add both service account and clusterRoleBinding in one yaml file.
  
 Lets create these resources using kubectl
 
-kubectl apply -f helm-rbac.yam
+```bash
+kubectl apply -f helm-rbac.yaml
+```
 
 Initialize Helm: Deploy Tiller
 Next step is to initialize helm. When you initialize helm, a deployment named tiller-deploy will be deployed in the kube-system namespace.
 
 If you want a specific tiller version to be installed, you can specify the tiller image link in the init command using --tiller-image flag. You can find the all tiller docker images in public google GCR registry.
 
+```bash
 helm init --service-account=tiller --tiller-image=gcr.io/kubernetes-helm/tiller:v2.14.1   --history-max 300
+```
 
 You can check the tiller deployment in the kube-system namespace using kubectl.
 
+```bash
 kubectl get deployment tiller-deploy -n kube-system
+```
 
